@@ -66,6 +66,84 @@ The node includes several presets optimized for different content types:
 
 The node appears in the ComfyUI menu under the `image/analysis` category as "Intelligent Detail Detector".
 
+## Basic Detail Enhancement Workflow
+
+1. **Load Image Node** - Load your source image
+   - Output: IMAGE
+
+2. **Intelligent Detail Detector Node** - Generate detail mask
+   - Inputs:
+     - image: Connect to Load Image output
+     - preset: "Default" (or choose based on image content)
+     - mode: "Auto"
+     - visualize_mask: "No" (to get original image and mask)
+   - Outputs:
+     - IMAGE: Original image
+     - MASK: Detail mask
+
+3. **Image Scale Node** - To upscale the original image
+   - Inputs: 
+     - image: Connect to Intelligent Detail Detector IMAGE output
+     - width/height: Your target resolution
+   - Output: Upscaled image
+
+4. **Latent from Image Node** - Convert upscaled image to latents
+   - Input: Connect to Image Scale output
+   - Output: LATENT
+
+5. **DetailerFix or ControlNet Node**
+   - Inputs:
+     - image: Connect to upscaled image
+     - mask: Connect to Intelligent Detail Detector MASK output
+     - model: Choose appropriate detail enhancer model
+   - Output: Enhanced latent
+
+6. **VAE Decode Node** - Convert back to image
+   - Input: Connect to DetailerFix/ControlNet output
+   - Output: Final enhanced image
+
+## Advanced Detail-Targeted Workflow
+
+1. **Load Image Node** → **Intelligent Detail Detector Node** (with "Yes" for visualize_mask to check detection)
+   - Configure Intelligent Detail Detector with preset for your image type
+   - Adjust parameters like detect_faces="Yes" for portraits
+
+2. **Once detection is satisfactory**, change visualize_mask to "No" and:
+
+3. **Image Scale Node** → Scale original image (from Intelligent Detail Detector output)
+
+4. **Split workflow into two branches**:
+   - Branch A: Apply standard upscale to base image
+   - Branch B: 
+     - Apply stronger detail enhancement using the mask
+     - Apply stronger models only to detailed areas
+
+5. **Mask Combine Node**:
+   - Use the detail mask to blend results from branches A and B
+   - Detailed areas get enhancement from Branch B
+   - Non-detailed areas get standard treatment from Branch A
+
+6. **Final Image Output**
+
+## Face-Focused Enhancement Workflow
+
+1. **Load Image Node** → **Intelligent Detail Detector Node**
+   - Configure with:
+     - preset: "Portrait"
+     - detect_faces: "Yes"
+     - face_weight: 0.9 (high emphasis on faces)
+
+2. **A/B Compare with two branches**:
+   - Branch A: Standard image upscaler
+   - Branch B: Face-optimized detail enhancer using the detail mask
+
+3. **Selective Enhancement**:
+   - Apply standard enhancement to non-face areas
+   - Apply face-optimized enhancement to face areas
+   - Use the detail mask to control the blend
+
+4. **Optional: Face Restoration Model** applied only to face regions using the mask
+
 ## Installation
 
 1. Clone this repository into your ComfyUI custom_nodes folder:
